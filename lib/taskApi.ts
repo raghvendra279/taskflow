@@ -2,6 +2,12 @@ import { supabase } from './supabase';
 import { Task, Column } from '@/types/task';
 
 export async function getTasks() {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return [];
+  }
+  
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -16,9 +22,20 @@ export async function getTasks() {
 }
 
 export async function createTask(task: Omit<Task, 'id'>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return null;
+  }
+  
+  const taskWithUserId = {
+    ...task,
+    user_id: user.id
+  };
+  
   const { data, error } = await supabase
     .from('tasks')
-    .insert([task])
+    .insert([taskWithUserId])
     .select();
   
   if (error) {
@@ -30,6 +47,12 @@ export async function createTask(task: Omit<Task, 'id'>) {
 }
 
 export async function updateTask(id: string, updates: Partial<Task>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return null;
+  }
+  
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
@@ -45,6 +68,12 @@ export async function updateTask(id: string, updates: Partial<Task>) {
 }
 
 export async function deleteTask(id: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return false;
+  }
+  
   const { error } = await supabase
     .from('tasks')
     .delete()
@@ -73,5 +102,5 @@ export async function getColumns() {
 }
 
 export async function updateTaskColumn(taskId: string, columnId: string) {
-  return updateTask(taskId, { columnId });
+  return updateTask(taskId, { columnId, status: columnId });
 } 

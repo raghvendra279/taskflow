@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   description TEXT,
   status TEXT NOT NULL,
   columnId TEXT,
+  user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -37,8 +38,11 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE columns ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
--- For now, allow all operations (in a real app, you'd want to restrict based on user ID)
-CREATE POLICY "Allow all operations for tasks" ON tasks FOR ALL USING (true);
+-- For tasks, only allow access to a user's own tasks
+CREATE POLICY "Users can only access their own tasks" ON tasks 
+  FOR ALL USING (auth.uid() = user_id);
+
+-- For columns, all authenticated users can access
 CREATE POLICY "Allow all operations for columns" ON columns FOR ALL USING (true);
 
 -- Create function to update the updated_at timestamp

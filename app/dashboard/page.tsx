@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import TaskBoard from "@/components/task-board"
 import type { Task, Column } from "@/types/task"
 import { Button } from "@/components/ui/button"
 import { getTasks, createTask, updateTask, deleteTask, getColumns, updateTaskColumn } from "@/lib/taskApi"
+import { useAuth } from "@/lib/auth"
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -15,8 +17,15 @@ export default function Dashboard() {
     { id: "done", title: "Done", color: "bg-green-50", order: 3 },
   ])
   const [loading, setLoading] = useState(true)
+  const { user, signOut } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
+    if (!user && !loading) {
+      router.push("/login")
+      return
+    }
+
     async function loadInitialData() {
       setLoading(true)
       try {
@@ -36,10 +45,14 @@ export default function Dashboard() {
       }
     }
     
-    loadInitialData()
-  }, [])
+    if (user) {
+      loadInitialData()
+    }
+  }, [user, router, loading])
 
   const addTask = async (title: string, description: string, status: string) => {
+    if (!user) return
+    
     const newTask = {
       title,
       description,
@@ -54,6 +67,8 @@ export default function Dashboard() {
   }
 
   const moveTask = async (taskId: string, newStatus: string) => {
+    if (!user) return
+    
     const updatedTask = await updateTaskColumn(taskId, newStatus)
     if (updatedTask) {
       setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus, columnId: newStatus } : task)))
@@ -61,10 +76,17 @@ export default function Dashboard() {
   }
 
   const handleDeleteTask = async (taskId: string) => {
+    if (!user) return
+    
     const success = await deleteTask(taskId)
     if (success) {
       setTasks(tasks.filter((task) => task.id !== taskId))
     }
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/login")
   }
 
   if (loading) {
@@ -89,12 +111,13 @@ export default function Dashboard() {
           <Link href="/" className="text-sm font-medium hover:underline underline-offset-4">
             Home
           </Link>
-          <Button variant="ghost" size="sm" className="text-sm font-medium">
+          <Button variant="ghost" size="sm" className="text-sm font-medium" onClick={handleSignOut}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Account
+            Sign Out
           </Button>
         </nav>
       </header>
@@ -103,6 +126,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Task Dashboard</h1>
             <p className="text-gray-500 mt-1">Manage and organize your tasks</p>
+            {user && <p className="text-sm text-blue-600 mt-1">Logged in as: {user.email}</p>}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm">

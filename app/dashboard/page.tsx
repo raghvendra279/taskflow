@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import TaskBoard from "@/components/task-board"
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { getTasks, createTask, updateTask, deleteTask, getColumns, updateTaskColumn } from "@/lib/taskApi"
 import { useAuth } from "@/lib/auth"
 
-export default function Dashboard() {
+// Component with client hooks
+function DashboardContent() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [columns, setColumns] = useState<Column[]>([
     { id: "todo", title: "To Do", color: "bg-blue-50", order: 1 },
@@ -263,5 +264,23 @@ export default function Dashboard() {
         </div>
       </footer>
     </div>
+  )
+}
+
+// Fallback loading state for Suspense
+function DashboardFallback() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  )
+}
+
+// Main page component with Suspense
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<DashboardFallback />}>
+      <DashboardContent />
+    </Suspense>
   )
 } 

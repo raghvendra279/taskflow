@@ -14,11 +14,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { signIn, isSupabaseAvailable } = useAuth()
+  const { signIn, isSupabaseAvailable, user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // Check if there's a redirect parameter
+  const redirectPath = searchParams.get('redirect') || '/dashboard'
+
   useEffect(() => {
+    // Redirect if already authenticated
+    if (user) {
+      router.push(redirectPath)
+    }
+
     // Check for error params in URL
     const errorType = searchParams.get('error')
     if (errorType === 'config') {
@@ -26,7 +34,7 @@ export default function LoginPage() {
     } else if (errorType === 'auth') {
       setError('Authentication error. Please try again.')
     }
-  }, [searchParams])
+  }, [searchParams, user, router, redirectPath])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,9 +49,16 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-      router.push("/dashboard")
-    } catch (err) {
-      setError("Invalid email or password. Please try again.")
+      router.push(redirectPath)
+    } catch (err: any) {
+      // Check for specific Supabase error codes
+      if (err.message?.includes('Invalid login credentials')) {
+        setError("Invalid email or password. Please try again.")
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError("Please confirm your email before logging in.")
+      } else {
+        setError("An error occurred during login. Please try again.")
+      }
       console.error("Login error:", err)
     } finally {
       setLoading(false)

@@ -23,10 +23,8 @@ function LoginForm() {
   const redirectPath = searchParams.get('redirect') || '/dashboard'
 
   useEffect(() => {
-    // Redirect if already authenticated
-    if (user) {
-      router.push(redirectPath)
-    }
+    // Don't redirect here anymore - let AuthProvider handle it
+    // The redirection is now handled in the auth context
 
     // Check for error params in URL
     const errorType = searchParams.get('error')
@@ -35,7 +33,7 @@ function LoginForm() {
     } else if (errorType === 'auth') {
       setError('Authentication error. Please try again.')
     }
-  }, [searchParams, user, router, redirectPath])
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +48,7 @@ function LoginForm() {
 
     try {
       await signIn(email, password)
-      router.push(redirectPath)
+      // Navigation is handled in the auth context
     } catch (err: any) {
       // Check for specific Supabase error codes
       if (err.message?.includes('Invalid login credentials')) {

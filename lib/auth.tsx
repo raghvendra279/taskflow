@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { getSupabase } from './supabase'
+import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
   session: Session | null
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSupabaseAvailable, setIsSupabaseAvailable] = useState(false)
+  const router = useRouter()
   
   useEffect(() => {
     // Only run this in the browser
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setSession(session)
         setUser(session?.user || null)
+        console.log("Initial auth session:", session ? "Active" : "None")
       } catch (error) {
         console.error('Error getting initial session:', error)
       } finally {
@@ -62,17 +65,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log("Auth state change:", event, session ? "Session exists" : "No session")
         setSession(session)
         setUser(session?.user || null)
         setLoading(false)
+        
+        // If signed in, navigate to dashboard
+        if (event === 'SIGNED_IN' && session) {
+          console.log("Auth event SIGNED_IN, navigating to dashboard")
+          router.push('/dashboard')
+        }
       }
     )
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [router])
 
   const signIn = async (email: string, password: string) => {
     const supabase = getSupabase()
@@ -81,13 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       
       if (error) {
         throw error
+      }
+      
+      // Immediately update the session and user state
+      if (data.session) {
+        setSession(data.session)
+        setUser(data.user)
+        console.log("Sign in successful, user state updated")
+        
+        // Explicitly navigate to dashboard after sign in
+        router.push('/dashboard')
       }
     } catch (error) {
       console.error('Error signing in:', error)
@@ -131,6 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         throw error
       }
+      
+      // Clear the user and session state immediately
+      setUser(null)
+      setSession(null)
     } catch (error) {
       console.error('Error signing out:', error)
       throw error

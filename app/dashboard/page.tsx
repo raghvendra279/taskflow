@@ -1,46 +1,78 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import TaskBoard from "@/components/task-board"
 import type { Task, Column } from "@/types/task"
 import { Button } from "@/components/ui/button"
+import { getTasks, createTask, updateTask, deleteTask, getColumns, updateTaskColumn } from "@/lib/taskApi"
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: "1", title: "Create project structure", description: "Set up Next.js with Tailwind CSS", status: "todo" },
-    {
-      id: "2",
-      title: "Design UI components",
-      description: "Create reusable components for the app",
-      status: "in-progress",
-    },
-    {
-      id: "3",
-      title: "Implement task movement",
-      description: "Allow tasks to be moved between columns",
-      status: "done",
-    },
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [columns, setColumns] = useState<Column[]>([
+    { id: "todo", title: "To Do", color: "bg-blue-50", order: 1 },
+    { id: "in-progress", title: "In Progress", color: "bg-yellow-50", order: 2 },
+    { id: "done", title: "Done", color: "bg-green-50", order: 3 },
   ])
+  const [loading, setLoading] = useState(true)
 
-  const columns: Column[] = [
-    { id: "todo", title: "To Do", color: "bg-blue-50" },
-    { id: "in-progress", title: "In Progress", color: "bg-yellow-50" },
-    { id: "done", title: "Done", color: "bg-green-50" },
-  ]
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true)
+      try {
+        // Load tasks from Supabase
+        const tasksData = await getTasks()
+        setTasks(tasksData)
+        
+        // Try to load columns from Supabase if they exist
+        const columnsData = await getColumns()
+        if (columnsData.length > 0) {
+          setColumns(columnsData)
+        }
+      } catch (error) {
+        console.error("Error loading data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadInitialData()
+  }, [])
 
-  const addTask = (title: string, description: string, status: string) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
+  const addTask = async (title: string, description: string, status: string) => {
+    const newTask = {
       title,
       description,
       status,
+      columnId: status // Using status as columnId for compatibility
     }
-    setTasks([...tasks, newTask])
+    
+    const createdTask = await createTask(newTask)
+    if (createdTask) {
+      setTasks([...tasks, createdTask])
+    }
   }
 
-  const moveTask = (taskId: string, newStatus: string) => {
-    setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)))
+  const moveTask = async (taskId: string, newStatus: string) => {
+    const updatedTask = await updateTaskColumn(taskId, newStatus)
+    if (updatedTask) {
+      setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus, columnId: newStatus } : task)))
+    }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    const success = await deleteTask(taskId)
+    if (success) {
+      setTasks(tasks.filter((task) => task.id !== taskId))
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
   }
 
   return (
@@ -92,66 +124,46 @@ export default function Dashboard() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-3">
-            <TaskBoard tasks={tasks} columns={columns} onAddTask={addTask} onMoveTask={moveTask} />
+            <TaskBoard 
+              tasks={tasks} 
+              columns={columns} 
+              onAddTask={addTask} 
+              onMoveTask={moveTask} 
+            />
           </div>
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold mb-4">Task Summary</h2>
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-muted-foreground">To Do</span>
-                  <span className="text-sm font-medium">{tasks.filter(t => t.status === 'todo').length}</span>
+              {columns.map(column => (
+                <div key={column.id}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-muted-foreground">{column.title}</span>
+                    <span className="text-sm font-medium">{tasks.filter(t => t.status === column.id).length}</span>
+                  </div>
+                  <div className={`h-2 ${column.color.replace('bg-', 'bg-').replace('50', '100')} rounded-full`}>
+                    <div 
+                      className={`h-full ${column.color.replace('bg-', 'bg-').replace('50', '500')} rounded-full`}
+                      style={{ width: tasks.length ? `${tasks.filter(t => t.status === column.id).length / tasks.length * 100}%` : '0%' }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="h-2 bg-blue-100 rounded-full">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full" 
-                    style={{ width: `${tasks.filter(t => t.status === 'todo').length / tasks.length * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-muted-foreground">In Progress</span>
-                  <span className="text-sm font-medium">{tasks.filter(t => t.status === 'in-progress').length}</span>
-                </div>
-                <div className="h-2 bg-yellow-100 rounded-full">
-                  <div 
-                    className="h-full bg-yellow-500 rounded-full" 
-                    style={{ width: `${tasks.filter(t => t.status === 'in-progress').length / tasks.length * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-muted-foreground">Done</span>
-                  <span className="text-sm font-medium">{tasks.filter(t => t.status === 'done').length}</span>
-                </div>
-                <div className="h-2 bg-green-100 rounded-full">
-                  <div 
-                    className="h-full bg-green-500 rounded-full" 
-                    style={{ width: `${tasks.filter(t => t.status === 'done').length / tasks.length * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+              ))}
             </div>
             <div className="mt-8">
               <h3 className="font-semibold mb-2 text-sm">Recent Activity</h3>
-              <div className="space-y-3">
-                <div className="flex gap-2 items-start">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
-                  <div>
-                    <p className="text-xs">Task "Design UI components" moved to In Progress</p>
-                    <p className="text-xs text-muted-foreground">10 minutes ago</p>
+              {tasks.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex gap-2 items-start">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                    <div>
+                      <p className="text-xs">You have {tasks.length} tasks in your board</p>
+                      <p className="text-xs text-muted-foreground">Updated just now</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2 items-start">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5"></div>
-                  <div>
-                    <p className="text-xs">Task "Implement task movement" completed</p>
-                    <p className="text-xs text-muted-foreground">1 hour ago</p>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500">No tasks yet. Create your first task to get started!</p>
+              )}
             </div>
           </div>
         </div>

@@ -1,7 +1,14 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import { Task, Column } from '@/types/task';
 
 export async function getTasks() {
+  const supabase = getSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase client not available');
+    return [];
+  }
+  
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -22,6 +29,13 @@ export async function getTasks() {
 }
 
 export async function createTask(task: Omit<Task, 'id'>) {
+  const supabase = getSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase client not available');
+    return null;
+  }
+  
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -47,6 +61,13 @@ export async function createTask(task: Omit<Task, 'id'>) {
 }
 
 export async function updateTask(id: string, updates: Partial<Task>) {
+  const supabase = getSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase client not available');
+    return null;
+  }
+  
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -68,6 +89,13 @@ export async function updateTask(id: string, updates: Partial<Task>) {
 }
 
 export async function deleteTask(id: string) {
+  const supabase = getSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase client not available');
+    return false;
+  }
+  
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -88,6 +116,13 @@ export async function deleteTask(id: string) {
 }
 
 export async function getColumns() {
+  const supabase = getSupabase();
+  
+  if (!supabase) {
+    console.error('Supabase client not available');
+    return [];
+  }
+  
   const { data, error } = await supabase
     .from('columns')
     .select('*')

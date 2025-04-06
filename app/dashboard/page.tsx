@@ -17,7 +17,8 @@ export default function Dashboard() {
     { id: "done", title: "Done", color: "bg-green-50", order: 3 },
   ])
   const [loading, setLoading] = useState(true)
-  const { user, signOut } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const { user, signOut, isSupabaseAvailable } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -28,6 +29,14 @@ export default function Dashboard() {
 
     async function loadInitialData() {
       setLoading(true)
+      setError(null)
+      
+      if (!isSupabaseAvailable) {
+        setError("Supabase connection is not available. Using local storage instead.")
+        setLoading(false)
+        return
+      }
+      
       try {
         // Load tasks from Supabase
         const tasksData = await getTasks()
@@ -40,6 +49,7 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.error("Error loading data:", error)
+        setError("Error loading your tasks. Please try again later.")
       } finally {
         setLoading(false)
       }
@@ -48,10 +58,22 @@ export default function Dashboard() {
     if (user) {
       loadInitialData()
     }
-  }, [user, router, loading])
+  }, [user, router, loading, isSupabaseAvailable])
 
   const addTask = async (title: string, description: string, status: string) => {
     if (!user) return
+    
+    if (!isSupabaseAvailable) {
+      // Fallback to local storage if Supabase is not available
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title,
+        description,
+        status,
+      }
+      setTasks([...tasks, newTask])
+      return
+    }
     
     const newTask = {
       title,
@@ -60,33 +82,67 @@ export default function Dashboard() {
       columnId: status // Using status as columnId for compatibility
     }
     
-    const createdTask = await createTask(newTask)
-    if (createdTask) {
-      setTasks([...tasks, createdTask])
+    try {
+      const createdTask = await createTask(newTask)
+      if (createdTask) {
+        setTasks([...tasks, createdTask])
+      }
+    } catch (err) {
+      console.error("Error creating task:", err)
+      setError("Error creating task. Please try again.")
     }
   }
 
   const moveTask = async (taskId: string, newStatus: string) => {
     if (!user) return
     
-    const updatedTask = await updateTaskColumn(taskId, newStatus)
-    if (updatedTask) {
-      setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus, columnId: newStatus } : task)))
+    if (!isSupabaseAvailable) {
+      // Fallback to local state if Supabase is not available
+      setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)))
+      return
+    }
+    
+    try {
+      const updatedTask = await updateTaskColumn(taskId, newStatus)
+      if (updatedTask) {
+        setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus, columnId: newStatus } : task)))
+      }
+    } catch (err) {
+      console.error("Error moving task:", err)
+      setError("Error moving task. Please try again.")
     }
   }
 
   const handleDeleteTask = async (taskId: string) => {
     if (!user) return
     
-    const success = await deleteTask(taskId)
-    if (success) {
+    if (!isSupabaseAvailable) {
+      // Fallback to local state if Supabase is not available
       setTasks(tasks.filter((task) => task.id !== taskId))
+      return
+    }
+    
+    try {
+      const success = await deleteTask(taskId)
+      if (success) {
+        setTasks(tasks.filter((task) => task.id !== taskId))
+      }
+    } catch (err) {
+      console.error("Error deleting task:", err)
+      setError("Error deleting task. Please try again.")
     }
   }
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/login")
+    try {
+      if (isSupabaseAvailable) {
+        await signOut()
+      }
+      router.push("/login")
+    } catch (err) {
+      console.error("Error signing out:", err)
+      setError("Error signing out. Please try again.")
+    }
   }
 
   if (loading) {
@@ -127,6 +183,14 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-gray-800">Task Dashboard</h1>
             <p className="text-gray-500 mt-1">Manage and organize your tasks</p>
             {user && <p className="text-sm text-blue-600 mt-1">Logged in as: {user.email}</p>}
+            {!isSupabaseAvailable && (
+              <p className="text-sm text-amber-600 mt-1">
+                Warning: Operating in offline mode. Changes will not be saved to the cloud.
+              </p>
+            )}
+            {error && (
+              <p className="text-sm text-red-600 mt-1">{error}</p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm">

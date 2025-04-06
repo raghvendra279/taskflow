@@ -15,12 +15,18 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const { signUp } = useAuth()
+  const { signUp, isSupabaseAvailable } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (!isSupabaseAvailable) {
+      setError("Supabase connection is not available. Please try again later.")
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -73,6 +79,11 @@ export default function SignupPage() {
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
                 {error}
+              </div>
+            )}
+            {!isSupabaseAvailable && !error && (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-sm">
+                Warning: Supabase connection is not available. Registration may not work.
               </div>
             )}
             <div className="space-y-2">

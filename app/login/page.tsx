@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,13 +14,30 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { signIn } = useAuth()
+  const { signIn, isSupabaseAvailable } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    // Check for error params in URL
+    const errorType = searchParams.get('error')
+    if (errorType === 'config') {
+      setError('Missing Supabase configuration. Please check environment variables.')
+    } else if (errorType === 'auth') {
+      setError('Authentication error. Please try again.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (!isSupabaseAvailable) {
+      setError("Supabase connection is not available. Please try again later.")
+      setLoading(false)
+      return
+    }
 
     try {
       await signIn(email, password)
@@ -47,6 +64,11 @@ export default function LoginPage() {
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
                 {error}
+              </div>
+            )}
+            {!isSupabaseAvailable && !error && (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-sm">
+                Warning: Supabase connection is not available. Login may not work.
               </div>
             )}
             <div className="space-y-2">

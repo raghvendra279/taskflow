@@ -7,7 +7,6 @@ A comprehensive task management application built with Next.js and Tailwind CSS 
 - **Kanban Boards**: Visualize your workflow with customizable Kanban boards
 - **Task Tracking**: Set deadlines and track progress with ease
 - **Intuitive Interface**: Simple and clean design that's easy to use for everyone
-- **GitHub Integration**: Link tasks directly to GitHub issues and pull requests
 
 ## Technologies Used
 

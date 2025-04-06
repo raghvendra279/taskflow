@@ -37,6 +37,7 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("Login form submitted with:", { email, password })
     setLoading(true)
     setError(null)
 
@@ -64,6 +65,16 @@ function LoginForm() {
     }
   }
 
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Email changing to:", e.target.value)
+    setEmail(e.target.value)
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Password changing")
+    setPassword(e.target.value)
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-full max-w-md">
@@ -88,12 +99,15 @@ function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
+                key="email-input"
                 id="email" 
+                name="email"
                 type="email" 
                 placeholder="your@email.com" 
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -107,11 +121,14 @@ function LoginForm() {
                 </Link>
               </div>
               <Input 
+                key="password-input"
                 id="password" 
+                name="password"
                 type="password" 
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 required
+                autoComplete="current-password"
               />
             </div>
           </CardContent>

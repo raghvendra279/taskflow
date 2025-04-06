@@ -74,8 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // If signed in, navigate to dashboard
         if (event === 'SIGNED_IN' && session) {
           console.log("Auth event SIGNED_IN, navigating to dashboard")
-          // Use direct navigation instead of router.push for more reliable redirect
-          window.location.href = '/dashboard'
+          // Force a delay before navigation to ensure state is updated
+          setTimeout(() => {
+            window.location.href = '/dashboard'
+          }, 100)
         }
       }
     )
@@ -107,8 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user)
         console.log("Sign in successful, user state updated")
         
-        // Use direct navigation instead of router.push for more reliable redirect
-        window.location.href = '/dashboard'
+        // Force a delay before navigation to ensure state is updated
+        setTimeout(() => {
+          // Navigate to dashboard - forcing a full page reload
+          window.location.href = '/dashboard'
+        }, 100)
+        
+        return
       }
     } catch (error) {
       console.error('Error signing in:', error)
@@ -156,6 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear the user and session state immediately
       setUser(null)
       setSession(null)
+      
+      // Navigate to login page
+      window.location.href = '/login'
     } catch (error) {
       console.error('Error signing out:', error)
       throw error

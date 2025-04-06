@@ -19,47 +19,56 @@ function DashboardContent() {
   ])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user, signOut, isSupabaseAvailable } = useAuth()
+  const { user, signOut, isSupabaseAvailable, loading: authLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!user && !loading) {
-      router.push("/login")
+    console.log("Dashboard useEffect - Auth status:", { user: !!user, authLoading, loading })
+    
+    // Only redirect if auth has finished loading and no user is found
+    if (!authLoading && !user && !loading) {
+      console.log("No user found after auth loaded, redirecting to login")
+      window.location.href = "/login"
       return
     }
 
-    async function loadInitialData() {
-      setLoading(true)
-      setError(null)
-      
-      if (!isSupabaseAvailable) {
-        setError("Supabase connection is not available. Using local storage instead.")
-        setLoading(false)
-        return
-      }
-      
-      try {
-        // Load tasks from Supabase
-        const tasksData = await getTasks()
-        setTasks(tasksData)
-        
-        // Try to load columns from Supabase if they exist
-        const columnsData = await getColumns()
-        if (columnsData.length > 0) {
-          setColumns(columnsData)
-        }
-      } catch (error) {
-        console.error("Error loading data:", error)
-        setError("Error loading your tasks. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    if (user) {
+    // Only load data if user is authenticated
+    if (user && !authLoading) {
+      console.log("User authenticated, loading task data")
       loadInitialData()
     }
-  }, [user, router, loading, isSupabaseAvailable])
+  }, [user, authLoading])
+
+  async function loadInitialData() {
+    setLoading(true)
+    setError(null)
+    
+    if (!isSupabaseAvailable) {
+      setError("Supabase connection is not available. Using local storage instead.")
+      setLoading(false)
+      return
+    }
+    
+    try {
+      console.log("Loading tasks from Supabase")
+      // Load tasks from Supabase
+      const tasksData = await getTasks()
+      setTasks(tasksData)
+      console.log(`Loaded ${tasksData.length} tasks`)
+      
+      // Try to load columns from Supabase if they exist
+      const columnsData = await getColumns()
+      if (columnsData.length > 0) {
+        setColumns(columnsData)
+        console.log(`Loaded ${columnsData.length} columns`)
+      }
+    } catch (error) {
+      console.error("Error loading data:", error)
+      setError("Error loading your tasks. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const addTask = async (title: string, description: string, status: string) => {
     if (!user) return
@@ -138,18 +147,39 @@ function DashboardContent() {
     try {
       if (isSupabaseAvailable) {
         await signOut()
+      } else {
+        window.location.href = "/login"
       }
-      router.push("/login")
     } catch (err) {
       console.error("Error signing out:", err)
       setError("Error signing out. Please try again.")
     }
   }
 
-  if (loading) {
+  // Show loading state if auth is still loading
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  // If we're not loading and there's no user, show an error instead of blank screen
+  // The redirect should happen, but if it doesn't, give feedback
+  if (!user && !authLoading && !loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="max-w-md w-full text-center space-y-4">
+          <h2 className="text-2xl font-bold text-red-600">Authentication Required</h2>
+          <p className="text-gray-600">You must be logged in to view this page.</p>
+          <Button 
+            onClick={() => window.location.href = "/login"}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Go to Login
+          </Button>
+        </div>
       </div>
     )
   }
@@ -265,6 +295,7 @@ function DashboardFallback() {
   return (
     <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <p className="ml-3 text-gray-600">Loading dashboard...</p>
     </div>
   )
 }

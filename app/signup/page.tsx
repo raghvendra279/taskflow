@@ -20,6 +20,7 @@ function SignupForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("Signup form submitted with:", { email, password, confirmPassword })
     setLoading(true)
     setError(null)
 
@@ -44,6 +45,21 @@ function SignupForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Email changing to:", e.target.value)
+    setEmail(e.target.value)
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Password changing")
+    setPassword(e.target.value)
+  }
+
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Confirm password changing")
+    setConfirmPassword(e.target.value)
   }
 
   if (success) {
@@ -90,32 +106,41 @@ function SignupForm() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
+                key="email-input"
                 id="email" 
+                name="email"
                 type="email" 
                 placeholder="your@email.com" 
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input 
+                key="password-input"
                 id="password" 
+                name="password"
                 type="password" 
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 required
+                autoComplete="new-password"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
               <Input 
+                key="confirm-password-input"
                 id="confirm-password" 
+                name="confirmPassword"
                 type="password" 
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={handleConfirmPasswordChange}
                 required
+                autoComplete="new-password"
               />
             </div>
           </CardContent>

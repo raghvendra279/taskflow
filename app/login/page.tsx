@@ -23,8 +23,11 @@ function LoginForm() {
   const redirectPath = searchParams.get('redirect') || '/dashboard'
 
   useEffect(() => {
-    // Don't redirect here anymore - let AuthProvider handle it
-    // The redirection is now handled in the auth context
+    // Add a fallback redirect for already authenticated users
+    if (user) {
+      console.log("User already authenticated in login page, redirecting to dashboard")
+      window.location.href = redirectPath
+    }
 
     // Check for error params in URL
     const errorType = searchParams.get('error')
@@ -33,7 +36,7 @@ function LoginForm() {
     } else if (errorType === 'auth') {
       setError('Authentication error. Please try again.')
     }
-  }, [searchParams])
+  }, [user, redirectPath, searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +52,7 @@ function LoginForm() {
 
     try {
       await signIn(email, password)
-      // Navigation is handled in the auth context
+      // Navigation is now handled by the auth context
     } catch (err: any) {
       // Check for specific Supabase error codes
       if (err.message?.includes('Invalid login credentials')) {
@@ -60,7 +63,6 @@ function LoginForm() {
         setError("An error occurred during login. Please try again.")
       }
       console.error("Login error:", err)
-    } finally {
       setLoading(false)
     }
   }

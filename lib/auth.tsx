@@ -54,6 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session)
         setUser(session?.user || null)
         console.log("Initial auth session:", session ? "Active" : "None")
+        
+        // If we already have a session, redirect to dashboard
+        if (session) {
+          console.log("Initial session found, redirecting to dashboard")
+          window.location.href = '/dashboard'
+        }
       } catch (error) {
         console.error('Error getting initial session:', error)
       } finally {
@@ -74,10 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // If signed in, navigate to dashboard
         if (event === 'SIGNED_IN' && session) {
           console.log("Auth event SIGNED_IN, navigating to dashboard")
-          // Force a delay before navigation to ensure state is updated
-          setTimeout(() => {
-            window.location.href = '/dashboard'
-          }, 100)
+          // Use direct navigation for production environments
+          window.location.href = '/dashboard'
         }
       }
     )
@@ -94,12 +98,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     try {
+      console.log("Attempting to sign in with:", email)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       
       if (error) {
+        console.error("Sign in error:", error)
         throw error
       }
       
@@ -109,13 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user)
         console.log("Sign in successful, user state updated")
         
-        // Force a delay before navigation to ensure state is updated
-        setTimeout(() => {
-          // Navigate to dashboard - forcing a full page reload
-          window.location.href = '/dashboard'
-        }, 100)
-        
+        // Navigate to dashboard immediately
+        console.log("Navigating to dashboard after successful login")
+        window.location.href = '/dashboard'
         return
+      } else {
+        console.error("Sign in successful but no session returned")
+        throw new Error("Authentication failed: No session returned")
       }
     } catch (error) {
       console.error('Error signing in:', error)

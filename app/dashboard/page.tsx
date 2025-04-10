@@ -19,14 +19,23 @@ function DashboardContent() {
   ])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isClient, setIsClient] = useState(false)
   const { user, signOut, isSupabaseAvailable, loading: authLoading } = useAuth()
   const router = useRouter()
 
+  // We need this to ensure we're running in the browser
   useEffect(() => {
-    console.log("Dashboard useEffect - Auth status:", { user: !!user, authLoading, loading })
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    console.log("Dashboard useEffect - Auth status:", { user: !!user, authLoading, loading, isClient })
+    
+    // Make sure we're in the browser and auth has loaded
+    if (!isClient) return
     
     // Only redirect if auth has finished loading and no user is found
-    if (!authLoading && !user && !loading) {
+    if (!authLoading && !user) {
       console.log("No user found after auth loaded, redirecting to login")
       window.location.href = "/login"
       return
@@ -37,7 +46,7 @@ function DashboardContent() {
       console.log("User authenticated, loading task data")
       loadInitialData()
     }
-  }, [user, authLoading])
+  }, [user, authLoading, isClient])
 
   async function loadInitialData() {
     setLoading(true)
@@ -157,17 +166,18 @@ function DashboardContent() {
   }
 
   // Show loading state if auth is still loading
-  if (authLoading || loading) {
+  if (authLoading || loading || !isClient) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <p className="ml-3 text-gray-600">Loading dashboard...</p>
       </div>
     )
   }
 
   // If we're not loading and there's no user, show an error instead of blank screen
   // The redirect should happen, but if it doesn't, give feedback
-  if (!user && !authLoading && !loading) {
+  if (!user && !authLoading && !loading && isClient) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
         <div className="max-w-md w-full text-center space-y-4">
@@ -302,6 +312,18 @@ function DashboardFallback() {
 
 // Main page component with Suspense
 export default function Dashboard() {
+  // Add a client-side check to ensure we're in the browser
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // If not yet mounted (server-side or first render), show the fallback
+  if (!mounted) {
+    return <DashboardFallback />
+  }
+
   return (
     <Suspense fallback={<DashboardFallback />}>
       <DashboardContent />
